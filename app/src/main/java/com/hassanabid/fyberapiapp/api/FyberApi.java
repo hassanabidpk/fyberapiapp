@@ -18,7 +18,7 @@ public interface FyberApi {
                                               @Query("ps_time") String ps_time,
                                               @Query("pub0") String pub0,
                                               @Query("timestamp") String timestamp,
-                                              @Query("uid") String uid,
                                               @Query("offer_types") String offer_types,
-                                              @Query("hash_key") String hash_key);
+                                              @Query("uid") String uid,
+                                              @Query("hashkey") String hash_key);
         }

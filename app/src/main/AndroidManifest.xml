@@ -33,7 +33,7 @@
                 android:value="com.hassanabid.fyberapiapp.OfferListActivity" />
         </activity>
         <activity
-            android:name=".RequestOffersActivity"
+            android:name=".activities.RequestOffersActivity"
             android:label="@string/title_activity_request_offers"
             android:parentActivityName=".OfferListActivity">
             <meta-data

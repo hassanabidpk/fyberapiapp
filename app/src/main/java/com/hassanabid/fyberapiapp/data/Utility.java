@@ -14,10 +14,12 @@ import java.security.NoSuchAlgorithmException;
 public class Utility {
 
     public static String SHA1(String url_address,String timestamp) {
-
-        url_address = url_address + "/feed/v1/offers.json?appid=" + Constants.APP_ID + "&device_id="+Constants.DEVICE_ID
+//        url_address + "/feed/v1/offers.json?appid=" +
+        url_address =  "appid=" + Constants.APP_ID + "&device_id="+Constants.DEVICE_ID
                 + "&ip="+Constants.IP_ADDRESS + "&locale=" + Constants.locale + "&page=1"
-                + "&ps_time=" + timestamp + "&pub0=campaign2&timestamp=" + timestamp + "&uid=" + Constants.UID
+                + "&ps_time=" + timestamp + "&pub0=campaign2&timestamp=" + timestamp
+                + "&offer_types=" + Constants.OFFER_TYPES
+                + "&uid=" + Constants.UID
                 + "&" + Constants.API_KEY;
 
         Log.d("Utility", "url_for_hash_key " + url_address);

@@ -1,5 +1,6 @@
 package com.hassanabid.fyberapiapp;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -21,6 +22,7 @@ import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.hassanabid.fyberapiapp.activities.OfferDetailActivity;
+import com.hassanabid.fyberapiapp.activities.RequestOffersActivity;
 import com.hassanabid.fyberapiapp.api.FyberApi;
 import com.hassanabid.fyberapiapp.api.FyberApiResponse;
 import com.hassanabid.fyberapiapp.data.Constants;
@@ -59,6 +61,7 @@ public class OfferListActivity extends AppCompatActivity {
 
     private RealmConfiguration mRealmConfig;
     private Realm mRealm;
+    private List<FyberApiResponse.Offer> mOffersList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,8 +79,9 @@ public class OfferListActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Snackbar.make(view, "Start the request activity", Snackbar.LENGTH_LONG)
+                        .setAction("Done", null).show();
+                startActivity(new Intent(OfferListActivity.this,RequestOffersActivity.class));
             }
         });
 
@@ -162,29 +166,6 @@ public class OfferListActivity extends AppCompatActivity {
                     .crossFade()
                     .into(holder.mThumbnail);
 
-          /*  holder.mView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mTwoPane) {
-                        Bundle arguments = new Bundle();
-                        arguments.putString(OfferDetailFragment.ARG_NAME_ID, holder.mRealmObject.getName());
-                        arguments.putString(OfferDetailFragment.ARG_IMAGE_ID,holder.mRealmObject.getImage());
-
-                        CupcakeDetailFragment fragment = new OfferDetailFragment();
-                        fragment.setArguments(arguments);
-                        getSupportFragmentManager().beginTransaction()
-                                .replace(R.id.cupcake_detail_container, fragment)
-                                .commit();
-                    } else {
-                        Context context = v.getContext();
-                        Intent intent = new Intent(context, OfferDetailActivity.class);
-                        intent.putExtra(OfferDetailFragment.ARG_NAME_ID, holder.mRealmObject.getName());
-                        intent.putExtra(OfferDetailFragment.ARG_IMAGE_ID, holder.mRealmObject.getImage());
-
-                        context.startActivity(intent);
-                    }
-                }
-            });*/
         }
 
         @Override
@@ -225,7 +206,7 @@ public class OfferListActivity extends AppCompatActivity {
         String hash_key  = Utility.SHA1(Constants.API_URL,timestamp);
         Log.d(LOG_TAG,"hashkey : " + hash_key.toLowerCase());
 
-        Log.d(LOG_TAG,"initiateCupcakeApi");
+        Log.d(LOG_TAG,"initiateFyberApiRequest");
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(Constants.API_URL)
                 .addConverterFactory(GsonConverterFactory.create())
@@ -235,12 +216,12 @@ public class OfferListActivity extends AppCompatActivity {
                                         Constants.DEVICE_ID,
                                         Constants.IP_ADDRESS,
                                         Constants.locale,
-                                        "1",
+                                        "2",
                                         timestamp,
                                         "campaign2",
                                         timestamp,
-                                        Constants.UID,
                                         Constants.OFFER_TYPES,
+                                         Constants.UID,
                                         hash_key.toLowerCase());
         progessBar.setVisibility(View.VISIBLE);
 
@@ -250,8 +231,8 @@ public class OfferListActivity extends AppCompatActivity {
 
                 if (response.isSuccessful()) {
                     Log.d(LOG_TAG, "success - response is " + response.body());
-//                    mCupcakeList = Arrays.asList(response.body());
-//                    executeRealmWriteTransaction(mCupcakeList);
+                    mOffersList = response.body().offers;
+                    executeRealmWriteTransaction(mOffersList);
 
                 } else {
                     progessBar.setVisibility(View.GONE);
