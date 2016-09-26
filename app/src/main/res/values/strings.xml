@@ -2,6 +2,8 @@
     <string name="app_name">FyberApiApp</string>
     <string name="title_offer_detail">Offer Detail</string>
     <string name="title_activity_request_offers">Request Offers</string>
+    <string name="dummy_text">Dummy Text</string>
+    <string name="empty_list">There are no offers fetched yet. Please click the + button to request!</string>
 
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>

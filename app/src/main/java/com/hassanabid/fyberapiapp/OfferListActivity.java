@@ -1,25 +1,42 @@
 package com.hassanabid.fyberapiapp;
 
-import android.content.Context;
-import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
-
+import com.bumptech.glide.Glide;
+import com.google.android.gms.ads.identifier.AdvertisingIdClient;
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.hassanabid.fyberapiapp.activities.OfferDetailActivity;
-import com.hassanabid.fyberapiapp.dummy.DummyContent;
-import com.hassanabid.fyberapiapp.fragments.OfferDetailFragment;
+import com.hassanabid.fyberapiapp.api.FyberApi;
+import com.hassanabid.fyberapiapp.api.FyberApiResponse;
+import com.hassanabid.fyberapiapp.data.Constants;
+import com.hassanabid.fyberapiapp.data.OfferObject;
+import com.hassanabid.fyberapiapp.data.Utility;
 
 import java.util.List;
+
+import io.realm.Realm;
+import io.realm.RealmConfiguration;
+import io.realm.RealmResults;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * An activity representing a list of Offers. This activity
@@ -31,16 +48,25 @@ import java.util.List;
  */
 public class OfferListActivity extends AppCompatActivity {
 
-    /**
-     * Whether or not the activity is in two-pane mode, i.e. running on a tablet
-     * device.
-     */
+
+    private static final String LOG_TAG = OfferListActivity.class.getSimpleName();
+
+
     private boolean mTwoPane;
+    private ProgressBar progessBar;
+    private TextView emptyTextView;
+    private RecyclerView recyclerView;
+
+    private RealmConfiguration mRealmConfig;
+    private Realm mRealm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_offer_list);
+
+        setupRealm();
+        getDeviceIdandInitiateRequest();
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -55,9 +81,10 @@ public class OfferListActivity extends AppCompatActivity {
             }
         });
 
-        View recyclerView = findViewById(R.id.offer_list);
-        assert recyclerView != null;
-        setupRecyclerView((RecyclerView) recyclerView);
+        recyclerView = (RecyclerView) findViewById(R.id.offer_list);
+        emptyTextView = (TextView) findViewById(R.id.emptyList);
+        progessBar = (ProgressBar) findViewById(R.id.progressBar);
+
 
         if (findViewById(R.id.offer_detail_container) != null) {
             // The detail container view will be present only in the
@@ -66,19 +93,52 @@ public class OfferListActivity extends AppCompatActivity {
             // activity should be in two-pane mode.
             mTwoPane = true;
         }
+
     }
 
-    private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
-        recyclerView.setAdapter(new SimpleItemRecyclerViewAdapter(DummyContent.ITEMS));
+    private void setupRealm() {
+        mRealmConfig = new RealmConfiguration.Builder(this).build();
+        Realm.setDefaultConfiguration(mRealmConfig);
+        mRealm = Realm.getDefaultInstance();
+
+    }
+
+    private RealmResults<OfferObject> getRealmResults() {
+
+        RealmResults<OfferObject> offers = mRealm.where(OfferObject.class).findAll();
+        Log.d(LOG_TAG,"getRealmResults : " + offers.size());
+        return offers;
+    }
+
+    private void deleteRealmObjects() {
+
+        mRealm.executeTransactionAsync(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+                realm.delete(OfferObject.class);
+            }
+        }, new Realm.Transaction.OnSuccess() {
+            @Override
+            public void onSuccess() {
+                Log.d(LOG_TAG,"realm objects deleted");
+
+            }
+        });
+    }
+
+
+    private void setupRecyclerView(@NonNull RecyclerView recyclerView, RealmResults<OfferObject> results) {
+        progessBar.setVisibility(View.GONE);
+        recyclerView.setAdapter(new SimpleItemRecyclerViewAdapter(results));
     }
 
     public class SimpleItemRecyclerViewAdapter
             extends RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder> {
 
-        private final List<DummyContent.DummyItem> mValues;
+        private final RealmResults<OfferObject> mRealmObjects;
 
-        public SimpleItemRecyclerViewAdapter(List<DummyContent.DummyItem> items) {
-            mValues = items;
+        public SimpleItemRecyclerViewAdapter(RealmResults<OfferObject> realmObjects) {
+            mRealmObjects = realmObjects;
         }
 
         @Override
@@ -90,54 +150,195 @@ public class OfferListActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(final ViewHolder holder, int position) {
-            holder.mItem = mValues.get(position);
-            holder.mIdView.setText(mValues.get(position).id);
-            holder.mContentView.setText(mValues.get(position).content);
+            holder.mRealmObject = mRealmObjects.get(position);
+            holder.mTitleView.setText(mRealmObjects.get(position).getTitle());
+            holder.mTeaserView.setText(mRealmObjects.get(position).getTeaser());
+            holder.mPayout.setText(mRealmObjects.get(position).getPayout());
 
-            holder.mView.setOnClickListener(new View.OnClickListener() {
+            Glide.with(holder.mThumbnail.getContext())
+                    .load(mRealmObjects.get(position).getHiResURL())
+                    .centerCrop()
+//                    .placeholder(R.drawable.loading_spinner)
+                    .crossFade()
+                    .into(holder.mThumbnail);
+
+          /*  holder.mView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mTwoPane) {
                         Bundle arguments = new Bundle();
-                        arguments.putString(OfferDetailFragment.ARG_ITEM_ID, holder.mItem.id);
-                        OfferDetailFragment fragment = new OfferDetailFragment();
+                        arguments.putString(OfferDetailFragment.ARG_NAME_ID, holder.mRealmObject.getName());
+                        arguments.putString(OfferDetailFragment.ARG_IMAGE_ID,holder.mRealmObject.getImage());
+
+                        CupcakeDetailFragment fragment = new OfferDetailFragment();
                         fragment.setArguments(arguments);
                         getSupportFragmentManager().beginTransaction()
-                                .replace(R.id.offer_detail_container, fragment)
+                                .replace(R.id.cupcake_detail_container, fragment)
                                 .commit();
                     } else {
                         Context context = v.getContext();
                         Intent intent = new Intent(context, OfferDetailActivity.class);
-                        intent.putExtra(OfferDetailFragment.ARG_ITEM_ID, holder.mItem.id);
+                        intent.putExtra(OfferDetailFragment.ARG_NAME_ID, holder.mRealmObject.getName());
+                        intent.putExtra(OfferDetailFragment.ARG_IMAGE_ID, holder.mRealmObject.getImage());
 
                         context.startActivity(intent);
                     }
                 }
-            });
+            });*/
         }
 
         @Override
         public int getItemCount() {
-            return mValues.size();
+            return mRealmObjects.size();
         }
 
         public class ViewHolder extends RecyclerView.ViewHolder {
             public final View mView;
-            public final TextView mIdView;
-            public final TextView mContentView;
-            public DummyContent.DummyItem mItem;
+            public final TextView mTitleView;
+            public final TextView mTeaserView;
+            public final ImageView mThumbnail;
+            public final TextView mPayout;
+            public OfferObject mRealmObject;
+
 
             public ViewHolder(View view) {
                 super(view);
                 mView = view;
-                mIdView = (TextView) view.findViewById(R.id.id);
-                mContentView = (TextView) view.findViewById(R.id.content);
+                mTitleView = (TextView) view.findViewById(R.id.title);
+                mTeaserView = (TextView) view.findViewById(R.id.teaser);
+                mPayout = (TextView) view.findViewById(R.id.payout);
+                mThumbnail = (ImageView) view.findViewById(R.id.thumbnail);
             }
 
             @Override
             public String toString() {
-                return super.toString() + " '" + mContentView.getText() + "'";
+                return super.toString() + " '" + mTitleView.getText() + "'";
             }
         }
+    }
+
+    private void initiateFyberApiRequest() {
+
+        Long tsLong = System.currentTimeMillis()/1000;
+        String timestamp = tsLong.toString();
+
+        String hash_key  = Utility.SHA1(Constants.API_URL,timestamp);
+        Log.d(LOG_TAG,"hashkey : " + hash_key.toLowerCase());
+
+        Log.d(LOG_TAG,"initiateCupcakeApi");
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(Constants.API_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        FyberApi api = retrofit.create(FyberApi.class);
+        Call<FyberApiResponse> call = api.getFyberOffers(Constants.APP_ID,
+                                        Constants.DEVICE_ID,
+                                        Constants.IP_ADDRESS,
+                                        Constants.locale,
+                                        "1",
+                                        timestamp,
+                                        "campaign2",
+                                        timestamp,
+                                        Constants.UID,
+                                        Constants.OFFER_TYPES,
+                                        hash_key.toLowerCase());
+        progessBar.setVisibility(View.VISIBLE);
+
+        call.enqueue(new Callback<FyberApiResponse>() {
+            @Override
+            public void onResponse(Call<FyberApiResponse> call, Response<FyberApiResponse> response) {
+
+                if (response.isSuccessful()) {
+                    Log.d(LOG_TAG, "success - response is " + response.body());
+//                    mCupcakeList = Arrays.asList(response.body());
+//                    executeRealmWriteTransaction(mCupcakeList);
+
+                } else {
+                    progessBar.setVisibility(View.GONE);
+                    Log.d(LOG_TAG, "failure response is " + response.raw().toString());
+
+                }
+            }
+
+            @Override
+            public void onFailure(Call<FyberApiResponse> call, Throwable t) {
+                Log.e(LOG_TAG, " Error :  " + t.getMessage());
+            }
+
+        });
+
+    }
+
+    private void executeRealmWriteTransaction (final List<FyberApiResponse.Offer> offers) {
+
+        Log.d(LOG_TAG,"saveRealmObjects : " + offers.size());
+        mRealm.executeTransactionAsync(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+
+                for (int i = 0; i < offers.size(); i++) {
+
+                    OfferObject cake = realm.createObject(OfferObject.class);
+                    cake.setTitle(offers.get(i).title);
+                    cake.setHiresURL(offers.get(i).thumbnail.hires);
+                    cake.setPayout(offers.get(i).payout);
+                    cake.setTeaser(offers.get(i).teaser);
+                }
+
+
+            }
+        },new Realm.Transaction.OnSuccess() {
+            @Override
+            public void onSuccess() {
+                Log.d(LOG_TAG,"savedRealmObjects");
+                setupRecyclerView(recyclerView,getRealmResults());
+            }
+
+        },new Realm.Transaction.OnError(){
+
+            @Override
+            public void onError(Throwable error) {
+                Log.d(LOG_TAG,"error while writing to realm db :" + error.getMessage());
+            }
+        });
+    }
+
+    private void getDeviceIdandInitiateRequest() {
+
+        new AsyncTask<Void,Void,String>() {
+
+            @Override
+            protected String doInBackground(Void... params) {
+                String adId = null;
+                try {
+                    AdvertisingIdClient.Info adInfo = AdvertisingIdClient.getAdvertisingIdInfo(OfferListActivity.this);
+                    adId = adInfo != null ? adInfo.getId() : null;
+                    Constants.DEVICE_ID = adId;
+                    Log.d(LOG_TAG,"adid :" + adId);
+
+
+                } catch (java.io.IOException | GooglePlayServicesRepairableException  | GooglePlayServicesNotAvailableException exception) {
+                    Log.d(LOG_TAG,"exception");
+                }
+                return adId;
+            }
+
+            @Override
+            protected void onPostExecute(String s) {
+                super.onPostExecute(s);
+
+                final RealmResults<OfferObject> offerObjects = getRealmResults();
+                if(offerObjects.size() == 0) {
+                    // TODO: show a message for no result
+                    emptyTextView.setVisibility(View.VISIBLE);
+                    initiateFyberApiRequest();
+                }
+                else {
+                    setupRecyclerView(recyclerView,offerObjects);
+                    emptyTextView.setVisibility(View.INVISIBLE);
+                }
+            }
+        }.execute();
+
     }
 }

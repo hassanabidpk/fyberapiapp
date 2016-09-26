@@ -27,7 +27,7 @@ public class OfferObject extends RealmObject {
         return teaser;
     }
 
-    public void setTeser(String teaser) {
+    public void setTeaser(String teaser) {
         this.teaser = teaser;
     }
 

@@ -28,7 +28,25 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <include layout="@layout/offer_list" />
+        <TextView
+            android:id="@+id/emptyList"
+            android:text="@string/empty_list"
+            android:visibility="invisible"
+            android:textColor="@android:color/holo_red_dark"
+            style="?android:attr/textAppearanceMedium"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_margin="@dimen/activity_horizontal_margin"
+            android:gravity="center" />
     </FrameLayout>
+
+    <ProgressBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/progressBar"
+        android:visibility="gone"
+        android:layout_gravity="center"/>
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"

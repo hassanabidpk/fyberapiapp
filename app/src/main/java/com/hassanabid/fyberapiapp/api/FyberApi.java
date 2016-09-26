@@ -10,10 +10,15 @@ import retrofit2.http.Query;
 public interface FyberApi {
 
     @GET("feed/v1/offers.json")
-    Call<FyberApiResponse[]> getCupcakesList( @Query("appid") String appid,
+    Call<FyberApiResponse> getFyberOffers( @Query("appid") String appid,
                                               @Query("device_id") String device_id,
                                               @Query("ip") String ip,
                                               @Query("locale") String locale,
+                                              @Query("page") String page,
+                                              @Query("ps_time") String ps_time,
+                                              @Query("pub0") String pub0,
+                                              @Query("timestamp") String timestamp,
+                                              @Query("uid") String uid,
                                               @Query("offer_types") String offer_types,
                                               @Query("hash_key") String hash_key);
         }
