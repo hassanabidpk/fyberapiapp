@@ -14,7 +14,7 @@ public class FyberApiResponse {
     public class Offer {
         public String title;
         public String teaser;
-        public String payout;
+        public int payout;
         public Thumbnail thumbnail;
 
     }

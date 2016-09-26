@@ -259,11 +259,11 @@ public class OfferListActivity extends AppCompatActivity {
 
                 for (int i = 0; i < offers.size(); i++) {
 
-                    OfferObject cake = realm.createObject(OfferObject.class);
-                    cake.setTitle(offers.get(i).title);
-                    cake.setHiresURL(offers.get(i).thumbnail.hires);
-                    cake.setPayout(offers.get(i).payout);
-                    cake.setTeaser(offers.get(i).teaser);
+                    OfferObject offer = realm.createObject(OfferObject.class);
+                    offer.setTitle(offers.get(i).title);
+                    offer.setHiresURL(offers.get(i).thumbnail.hires);
+                    offer.setPayout(String.valueOf(offers.get(i).payout));
+                    offer.setTeaser(offers.get(i).teaser);
                 }
 
 
