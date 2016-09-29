@@ -34,6 +34,7 @@ import java.util.List;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
 import io.realm.RealmResults;
+import okhttp3.OkHttpClient;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -205,11 +206,14 @@ public class OfferListActivity extends AppCompatActivity {
 
         String hash_key  = Utility.SHA1(Constants.API_URL,timestamp);
         Log.d(LOG_TAG,"hashkey : " + hash_key.toLowerCase());
+        hash_key = Constants.API_KEY;
 
+        OkHttpClient client = new OkHttpClient();
         Log.d(LOG_TAG,"initiateFyberApiRequest");
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(Constants.API_URL)
                 .addConverterFactory(GsonConverterFactory.create())
+                .client(client)
                 .build();
         FyberApi api = retrofit.create(FyberApi.class);
         Call<FyberApiResponse> call = api.getFyberOffers(Constants.APP_ID,
@@ -234,7 +238,9 @@ public class OfferListActivity extends AppCompatActivity {
                     mOffersList = response.body().offers;
                     executeRealmWriteTransaction(mOffersList);
 
+
                 } else {
+                    emptyTextView.setVisibility(View.VISIBLE);
                     progessBar.setVisibility(View.GONE);
                     Log.d(LOG_TAG, "failure response is " + response.raw().toString());
 
@@ -243,7 +249,9 @@ public class OfferListActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<FyberApiResponse> call, Throwable t) {
-                Log.e(LOG_TAG, " Error :  " + t.getMessage());
+                Log.e(LOG_TAG, "Error :  " + t.getMessage());
+                emptyTextView.setVisibility(View.VISIBLE);
+
             }
 
         });
@@ -311,12 +319,10 @@ public class OfferListActivity extends AppCompatActivity {
                 final RealmResults<OfferObject> offerObjects = getRealmResults();
                 if(offerObjects.size() == 0) {
                     // TODO: show a message for no result
-                    emptyTextView.setVisibility(View.VISIBLE);
                     initiateFyberApiRequest();
                 }
                 else {
                     setupRecyclerView(recyclerView,offerObjects);
-                    emptyTextView.setVisibility(View.INVISIBLE);
                 }
             }
         }.execute();
